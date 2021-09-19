@@ -28,8 +28,6 @@
 </template>
 
 <script>
-let inputMultipleValue = []; // 用来保存多选时input中显示的数据
-let valueMultiple = []; // 用来保存多选时返回的数据
 const typeList = [
   "[object Boolean]",
   "[object Number]",
@@ -66,73 +64,79 @@ export default {
   data() {
     return {
       isFocus: false,
+      inputMultipleValue: [], // 用来保存多选时input中显示的数据
+      valueMultiple: [], // 用来保存多选时返回的数据
     };
   },
   computed: {
-    inputValue: {
-      get() {
-        let inputValue = "";
-        if (
-          this.value === undefined ||
-          this.value === null ||
-          this.value === "" ||
-          this.value.length === 0
-        ) {
-          inputMultipleValue = [];
-          valueMultiple = [];
-          return inputValue;
-        }
-        const type = Object.prototype.toString.call(this.value);
-        if (type === typeList[typeList.length - 2]) {
-          if (this.value.label) {
-            inputValue = this.value.label;
-          }
-          return inputValue;
-        }
-        if (type === typeList[typeList.length - 1]) {
-          const value = [...this.value];
-          if (this.options[0].value instanceof Object) {
-            value.length = 0;
-            this.value.forEach((v) => {
-              value.push(v.value);
-            });
-          }
+    inputValue(vm) {
+      let inputValue = "";
+      if (
+        this.value === undefined ||
+        this.value === null ||
+        this.value === "" ||
+        this.value.length === 0
+      ) {
+        return inputValue;
+      }
+      const type = Object.prototype.toString.call(this.value);
+      if (type === typeList[typeList.length - 1]) {
+        const value = [...this.value];
+        // 多选时，值为对象的处理
+        if (this.options[0].value instanceof Object) {
+          value.length = 0;
+          this.value.forEach((v) => {
+            value.push(v.value);
+          });
           this.options.forEach((option) => {
-            if (value.includes(option.value.value) && !inputMultipleValue.includes(option.label)) {
-              inputMultipleValue.push(option.label);
-              valueMultiple.push(option.value);
+            if (
+              value.includes(option.value.value) &&
+              !this.inputMultipleValue.includes(option.label)
+            ) {
+              this.inputMultipleValue.push(option.label);
+              this.valueMultiple.push(option.value);
             }
           });
-          inputValue = inputMultipleValue.sort().join(",");
-          return inputValue;
-        }
-        if (typeList.includes(type)) {
+        } else {
           this.options.forEach((option) => {
-            if (this.value === option.value) {
-              inputValue = option.label;
+            if (value.includes(option.value) && !this.inputMultipleValue.includes(option.label)) {
+              this.inputMultipleValue.push(option.label);
+              this.valueMultiple.push(option.value);
             }
           });
-          return inputValue;
+        }
+        inputValue = vm.inputMultipleValue.sort().join(",");
+        return inputValue;
+      }
+      if (type === typeList[typeList.length - 2]) {
+        if (this.value.label) {
+          inputValue = this.value.label;
         }
         return inputValue;
-      },
-      set() {
-        this.inputValue = inputMultipleValue.sort().join(",");
-      },
+      }
+      if (typeList.includes(type)) {
+        this.options.forEach((option) => {
+          if (this.value === option.value) {
+            inputValue = option.label;
+          }
+        });
+        return inputValue;
+      }
+      return inputValue;
     },
   },
   methods: {
     handleSelectValue(option) {
       const value = option.value !== undefined || option.value !== null ? option.value : option;
-      if (inputMultipleValue.includes(option.label)) {
-        inputMultipleValue.splice(inputMultipleValue.indexOf(option.label), 1);
-        valueMultiple.splice(valueMultiple.indexOf(value), 1);
-      } else {
-        inputMultipleValue.push(option.label);
-        valueMultiple.push(value);
-      }
       if (this.multiple) {
-        this.$emit("change", valueMultiple);
+        if (this.inputMultipleValue.includes(option.label)) {
+          this.inputMultipleValue.splice(this.inputMultipleValue.indexOf(option.label), 1);
+          this.valueMultiple.splice(this.valueMultiple.indexOf(value), 1);
+        } else {
+          this.inputMultipleValue.push(option.label);
+          this.valueMultiple.push(value);
+        }
+        this.$emit("change", this.valueMultiple);
       } else {
         this.isFocus = false;
         this.$emit("change", value);
